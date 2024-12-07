@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Shiying Wu" />
+
+<meta name="date" content="2024-12-03" />
+
+<title>Data Cleaning</title>
+
+<script src="site_libs/header-attrs-2.28/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Home</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="Report.html">About</a>
+</li>
+<li>
+  <a href="Regional.html">Regional Analyze</a>
+</li>
+<li>
+  <a href="Stars.html">Rating Analyze</a>
+</li>
+<li>
+  <a href="https://github.com/ShiyingWu-Angel/P8105_final_Project">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Data Cleaning</h1>
+<h4 class="author">Shiying Wu</h4>
+<h4 class="date">2024-12-03</h4>
+
+</div>
+
+
+<pre class="r"><code>load(&quot;data/yelp.rdata&quot;)
+NY&lt;-data|&gt;
+  filter(str_detect(city, regex(&quot;New York&quot;, ignore_case = TRUE)))
+
+
+PA&lt;-
+  data|&gt;
+  janitor::clean_names()|&gt;
+  filter(str_detect(categories, regex(&quot;restaurant&quot;, ignore_case = TRUE))) |&gt;
+  filter(state == &quot;PA&quot;) 
+
+categories_to_keep &lt;- c(
+  &quot;Afghan&quot;, &quot;African&quot;, &quot;American (New)&quot;, &quot;American (Traditional)&quot;, 
+  &quot;Andalusian&quot;, &quot;Arabian&quot;, &quot;Argentine&quot;, &quot;Armenian&quot;, &quot;Asian Fusion&quot;, &quot;Asturian&quot;, 
+  &quot;Australian&quot;, &quot;Austrian&quot;, &quot;Baguettes&quot;, &quot;Bangladeshi&quot;, &quot;Barbeque&quot;, &quot;Basque&quot;, &quot;Bavarian&quot;, 
+  &quot;Beer Garden&quot;, &quot;Beer Hall&quot;, &quot;Beisl&quot;, &quot;Belgian&quot;, &quot;Bistros&quot;, &quot;Black Sea&quot;, &quot;Brasseries&quot;, 
+  &quot;Brazilian&quot;, &quot;Breakfast &amp; Brunch&quot;, &quot;British&quot;, &quot;Buffets&quot;, 
+  &quot;Bulgarian&quot;, &quot;Burgers&quot;, &quot;Burmese&quot;, &quot;Cafes&quot;, &quot;Cafeteria&quot;, &quot;Cajun/Creole&quot;, 
+  &quot;Cambodian&quot;, &quot;Canadian (New)&quot;, &quot;Canteen&quot;, &quot;Caribbean&quot;, &quot;Catalan&quot;, &quot;Cheesesteaks&quot;, &quot;Chicken Shop&quot;, &quot;Chicken Wings&quot;, &quot;Chilean&quot;, &quot;Chinese&quot;, &quot;Comfort Food&quot;, &quot;Corsican&quot;, &quot;Creperies&quot;, 
+  &quot;Cuban&quot;, &quot;Curry Sausage&quot;, &quot;Cypriot&quot;, &quot;Czech&quot;, &quot;Czech/Slovakian&quot;, &quot;Danish&quot;, &quot;Delis&quot;, &quot;Diners&quot;, 
+  &quot;Dinner Theater&quot;, &quot;Dumplings&quot;, &quot;Eastern European&quot;, &quot;Eritrean&quot;, &quot;Ethiopian&quot;, &quot;Fast Food&quot;, 
+  &quot;Filipino&quot;, &quot;Fischbroetchen&quot;, &quot;Fish &amp; Chips&quot;, &quot;Flatbread&quot;, &quot;Fondue&quot;, &quot;Food Court&quot;, &quot;Food Stands&quot;, 
+  &quot;Freiduria&quot;, &quot;French&quot;, &quot;French Southwest&quot;, &quot;Galician&quot;, &quot;Game Meat&quot;, &quot;Gastropubs&quot;, 
+  &quot;Georgian&quot;, &quot;German&quot;, &quot;Giblets&quot;, &quot;Gluten-Free&quot;, &quot;Greek&quot;, &quot;Guamanian&quot;, &quot;Halal&quot;, &quot;Hawaiian&quot;, 
+  &quot;Heuriger&quot;, &quot;Himalayan/Nepalese&quot;, &quot;Honduran&quot;, &quot;Hong Kong Style Cafe&quot;, &quot;Hot Dogs&quot;, &quot;Hot Pot&quot;, 
+  &quot;Hungarian&quot;, &quot;Iberian&quot;, &quot;Indian&quot;, &quot;Indonesian&quot;, &quot;International&quot;, &quot;Irish&quot;, &quot;Island Pub&quot;, 
+  &quot;Israeli&quot;, &quot;Italian&quot;, &quot;Japanese&quot;, &quot;Jewish&quot;, &quot;Kebab&quot;, &quot;Kopitiam&quot;, &quot;Korean&quot;, &quot;Kosher&quot;, &quot;Kurdish&quot;, &quot;Laos&quot;, 
+  &quot;Laotian&quot;, &quot;Latin American&quot;, &quot;Live/Raw Food&quot;, &quot;Lyonnais&quot;, 
+  &quot;Malaysian&quot;, &quot;Meatballs&quot;, &quot;Mediterranean&quot;,  &quot;Mexican&quot;,
+  &quot;Middle Eastern&quot;, &quot;Milk Bars&quot;, &quot;Modern Australian&quot;, &quot;Modern European&quot;, 
+  &quot;Mongolian&quot;, &quot;Moroccan&quot;, &quot;New Mexican Cuisine&quot;, &quot;New Zealand&quot;, &quot;Nicaraguan&quot;, &quot;Night Food&quot;, 
+  &quot;Nikkei&quot;, &quot;Noodles&quot;, &quot;Norcinerie&quot;, &quot;Open Sandwiches&quot;, &quot;Oriental&quot;, &quot;Pakistani&quot;, &quot;Pan Asian&quot;, 
+  &quot;Parent Cafes&quot;, &quot;Parma&quot;, &quot;Persian/Iranian&quot;, &quot;Peruvian&quot;, &quot;PF/Comercial&quot;, &quot;Pita&quot;, &quot;Pizza&quot;, 
+  &quot;Polish&quot;, &quot;Polynesian&quot;, &quot;Pop-Up Restaurants&quot;, &quot;Portuguese&quot;, &quot;Potatoes&quot;, 
+  &quot;Poutineries&quot;, &quot;Pub Food&quot;, &quot;Rice&quot;, &quot;Romanian&quot;, &quot;Rotisserie Chicken&quot;, &quot;Russian&quot;, &quot;Salad&quot;, 
+  &quot;Sandwiches&quot;, &quot;Scandinavian&quot;, &quot;Schnitzel&quot;, &quot;Scottish&quot;, &quot;Seafood&quot;, &quot;Serbo Croatian&quot;, 
+  &quot;Signature Cuisine&quot;, &quot;Singaporean&quot;, &quot;Slovakian&quot;, &quot;Somali&quot;, &quot;Soul Food&quot;, &quot;Soup&quot;, &quot;Southern&quot;, 
+  &quot;Spanish&quot;, &quot;Sri Lankan&quot;, &quot;Steakhouses&quot;, &quot;Supper Clubs&quot;, &quot;Sushi Bars&quot;, 
+  &quot;Swabian&quot;, &quot;Swedish&quot;, &quot;Swiss Food&quot;, &quot;Syrian&quot;, &quot;Tabernas&quot;, &quot;Taiwanese&quot;, &quot;Tapas Bars&quot;, 
+  &quot;Tapas/Small Plates&quot;, &quot;Tavola Calda&quot;, &quot;Tex-Mex&quot;, &quot;Thai&quot;, &quot;Traditional Norwegian&quot;, 
+  &quot;Traditional Swedish&quot;, &quot;Trattorie&quot;, &quot;Turkish&quot;, &quot;Ukrainian&quot;, &quot;Uzbek&quot;, &quot;Vegan&quot;, &quot;Vegetarian&quot;, 
+  &quot;Venison&quot;, &quot;Vietnamese&quot;, &quot;Waffles&quot;, &quot;Wok&quot;, &quot;Wraps&quot;, &quot;Yugoslav&quot;
+)
+category_summary&lt;-
+  PA |&gt;
+  separate_rows(categories, sep = &quot;,\\s*&quot;)|&gt;
+  group_by(categories) |&gt;
+  summarize(count = n()) |&gt;
+  arrange(desc(count))
+
+print(category_summary)</code></pre>
+<pre><code>## # A tibble: 488 × 2
+##    categories             count
+##    &lt;chr&gt;                  &lt;int&gt;
+##  1 Restaurants            12641
+##  2 Food                    3853
+##  3 Sandwiches              2151
+##  4 Pizza                   2128
+##  5 Nightlife               1936
+##  6 Bars                    1854
+##  7 American (Traditional)  1779
+##  8 American (New)          1539
+##  9 Italian                 1433
+## 10 Breakfast &amp; Brunch      1425
+## # ℹ 478 more rows</code></pre>
+<pre class="r"><code>filterPA&lt;-
+  PA|&gt;
+  filter(is_open == 1)|&gt;
+  separate_rows(categories, sep = &quot;,\\s*&quot;)|&gt;
+  filter(categories!=&quot;Food&quot; &amp; categories!=&quot;Restaurants&quot;)|&gt;
+  filter(categories %in% categories_to_keep) |&gt;
+  group_by(name, address, city, postal_code, latitude, longitude, stars, review_count, attributes, hours) |&gt;  
+  summarize(categories = paste(unique(categories), collapse = &quot;, &quot;)) |&gt; 
+  ungroup()</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;name&#39;, &#39;address&#39;, &#39;city&#39;, &#39;postal_code&#39;,
+## &#39;latitude&#39;, &#39;longitude&#39;, &#39;stars&#39;, &#39;review_count&#39;, &#39;attributes&#39;. You can
+## override using the `.groups` argument.</code></pre>
+<pre class="r"><code>filterPA$city &lt;- tolower(filterPA$city)
+
+filterPA &lt;- filterPA |&gt;
+  mutate(
+    postal_code = ifelse(postal_code == 10426, 19426, postal_code),
+    city = case_when(
+      city == &quot;bensalem. pa&quot; ~ &quot;bensalem&quot;,
+      city == &quot;bensalem township&quot; ~ &quot;bensalem&quot;,
+      city == &quot;glenoldan&quot; ~ &quot;glenolden&quot;,
+      city == &quot;feasterville-trevose&quot; ~ &quot;feasterville trevose&quot;,
+      city == &quot;feasterville&quot; ~ &quot;feasterville trevose&quot;,
+      city == &quot;bristol twp&quot; ~ &quot;bristol&quot;,
+      city == &quot;bethel township&quot; ~ &quot;bethel&quot;,
+      city == &quot;phila&quot; ~ &quot;philadelphia&quot;,
+      city == &quot;philadelphia&quot; ~ &quot;philadelphia&quot;,
+      city == &quot;philly&quot; ~ &quot;philadelphia&quot;,
+      city == &quot;fox street&quot; ~ &quot;philadelphia&quot;,
+      city == &quot;west chester pa&quot; ~ &quot;west chester&quot;,
+      city == &quot;w.chester&quot; ~ &quot;west chester&quot;,
+      city == &quot;gwynedd valley&quot; ~ &quot;gwynedd&quot;,
+      city == &quot;skippack village&quot; ~ &quot;skippack&quot;,
+      city == &quot;abington township&quot; ~ &quot;abington&quot;,
+      city == &quot;cheltenham township&quot; ~ &quot;cheltenham&quot;,
+      city == &quot;concordville&quot; ~ &quot;concord township&quot;,
+      city == &quot;ridley park&quot; ~ &quot;ridley&quot;,
+      city == &quot;warrington township&quot; ~ &quot;warrington&quot;,
+      city == &quot;pennsylvania&quot; ~ &quot;philadelphia&quot;,
+      TRUE ~ city  
+    )
+  )
+
+save(filterPA, file = &quot;data/filterPA.RData&quot;)</code></pre>
+<pre class="r"><code>PACounty &lt;- read_csv(&quot;data/PA-city-county.csv&quot;)</code></pre>
+<pre><code>## Rows: 227 Columns: 2
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (2): city, county
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>mergedPA &lt;- filterPA |&gt;
+  left_join(PACounty, by = &quot;city&quot;)
+mergedPA &lt;- mergedPA %&gt;%
+  mutate(
+    county = case_when(
+      postal_code == 18969 ~ &quot;Montgomery&quot;,
+      postal_code == 19123 ~ &quot;Philadelphia&quot;,
+      postal_code == 19446 ~ &quot;Montgomery&quot;,
+      postal_code == 19473 ~ &quot;Montgomery&quot;,
+      TRUE ~ county 
+    )
+  )
+
+save(mergedPA, file = &quot;data/mergedPA.RData&quot;)
+ 
+
+calculate_daily_hours &lt;- function(time_str) {
+  if (is.na(time_str) || time_str == &quot;0:0-0:0&quot; || time_str == &quot;&quot;) {
+    return(0) 
+  }
+  times &lt;- str_split(time_str, &quot;-&quot;)[[1]]
+  start_time &lt;- as.numeric(str_split(times[1], &quot;:&quot;)[[1]][1])
+  end_time &lt;- as.numeric(str_split(times[2], &quot;:&quot;)[[1]][1])
+  if (end_time &lt; start_time) {
+    end_time &lt;- end_time + 24
+  }
+  return(end_time - start_time)
+}
+
+mergedPA &lt;- mergedPA |&gt;
+  mutate(
+    Monday_hours = sapply(hours$Monday, calculate_daily_hours),
+    Tuesday_hours = sapply(hours$Tuesday, calculate_daily_hours),
+    Wednesday_hours = sapply(hours$Wednesday, calculate_daily_hours),
+    Thursday_hours = sapply(hours$Thursday, calculate_daily_hours),
+    Friday_hours = sapply(hours$Friday, calculate_daily_hours),
+    Saturday_hours = sapply(hours$Saturday, calculate_daily_hours),
+    Sunday_hours = sapply(hours$Sunday, calculate_daily_hours),
+    Total_hours = Monday_hours + Tuesday_hours + Wednesday_hours + Thursday_hours +
+                  Friday_hours + Saturday_hours + Sunday_hours,
+    Weekday_hours = Monday_hours + Tuesday_hours + Wednesday_hours +
+                    Thursday_hours + Friday_hours,
+    Weekend_hours = Saturday_hours + Sunday_hours
+  )
+
+
+print(mergedPA)</code></pre>
+<pre><code>## # A tibble: 7,801 × 22
+##    name          address city  postal_code latitude longitude stars review_count
+##    &lt;chr&gt;         &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;        &lt;int&gt;
+##  1 $5 Fresh Bur… 2100 W… phil… 19145           39.9     -75.2   5              5
+##  2 &amp;pizza - UPe… 3925 W… phil… 19104           40.0     -75.2   4             61
+##  3 &amp;pizza - Wal… 430 Wa… phil… 19102           39.9     -75.2   4.5          364
+##  4 &amp;pizza - Wil… 2500 W… will… 19090           40.1     -75.1   4.5           20
+##  5 &#39;feine        812 Fa… cons… 19428           40.1     -75.3   4.5          166
+##  6 1 Stop Pizza  3701 G… phil… 19140           40.0     -75.2   3.5            8
+##  7 1010 Pizza &amp;… 1010 W… media 19063           39.9     -75.4   4             73
+##  8 1100 Social   1100 P… phil… 19148           39.9     -75.2   3             42
+##  9 118 North     118 N … wayne 19087           40.0     -75.4   3.5           43
+## 10 1201 Bar      1201 S… phil… 19146           39.9     -75.2   3.5            5
+## # ℹ 7,791 more rows
+## # ℹ 14 more variables: attributes &lt;df[,39]&gt;, hours &lt;df[,7]&gt;, categories &lt;chr&gt;,
+## #   county &lt;chr&gt;, Monday_hours &lt;dbl&gt;, Tuesday_hours &lt;dbl&gt;,
+## #   Wednesday_hours &lt;dbl&gt;, Thursday_hours &lt;dbl&gt;, Friday_hours &lt;dbl&gt;,
+## #   Saturday_hours &lt;dbl&gt;, Sunday_hours &lt;dbl&gt;, Total_hours &lt;dbl&gt;,
+## #   Weekday_hours &lt;dbl&gt;, Weekend_hours &lt;dbl&gt;</code></pre>
+<pre class="r"><code>save(mergedPA, file = &quot;data/mergedPA.RData&quot;)</code></pre>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

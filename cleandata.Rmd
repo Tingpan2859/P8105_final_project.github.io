@@ -1,0 +1,160 @@
+---
+title: "Data Cleaning"
+author: "Shiying Wu"
+date: "2024-12-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(httr)  
+```
+```{r data cleaning}
+load("data/yelp.rdata")
+NY<-data|>
+  filter(str_detect(city, regex("New York", ignore_case = TRUE)))
+
+
+PA<-
+  data|>
+  janitor::clean_names()|>
+  filter(str_detect(categories, regex("restaurant", ignore_case = TRUE))) |>
+  filter(state == "PA") 
+
+categories_to_keep <- c(
+  "Afghan", "African", "American (New)", "American (Traditional)", 
+  "Andalusian", "Arabian", "Argentine", "Armenian", "Asian Fusion", "Asturian", 
+  "Australian", "Austrian", "Baguettes", "Bangladeshi", "Barbeque", "Basque", "Bavarian", 
+  "Beer Garden", "Beer Hall", "Beisl", "Belgian", "Bistros", "Black Sea", "Brasseries", 
+  "Brazilian", "Breakfast & Brunch", "British", "Buffets", 
+  "Bulgarian", "Burgers", "Burmese", "Cafes", "Cafeteria", "Cajun/Creole", 
+  "Cambodian", "Canadian (New)", "Canteen", "Caribbean", "Catalan", "Cheesesteaks", "Chicken Shop", "Chicken Wings", "Chilean", "Chinese", "Comfort Food", "Corsican", "Creperies", 
+  "Cuban", "Curry Sausage", "Cypriot", "Czech", "Czech/Slovakian", "Danish", "Delis", "Diners", 
+  "Dinner Theater", "Dumplings", "Eastern European", "Eritrean", "Ethiopian", "Fast Food", 
+  "Filipino", "Fischbroetchen", "Fish & Chips", "Flatbread", "Fondue", "Food Court", "Food Stands", 
+  "Freiduria", "French", "French Southwest", "Galician", "Game Meat", "Gastropubs", 
+  "Georgian", "German", "Giblets", "Gluten-Free", "Greek", "Guamanian", "Halal", "Hawaiian", 
+  "Heuriger", "Himalayan/Nepalese", "Honduran", "Hong Kong Style Cafe", "Hot Dogs", "Hot Pot", 
+  "Hungarian", "Iberian", "Indian", "Indonesian", "International", "Irish", "Island Pub", 
+  "Israeli", "Italian", "Japanese", "Jewish", "Kebab", "Kopitiam", "Korean", "Kosher", "Kurdish", "Laos", 
+  "Laotian", "Latin American", "Live/Raw Food", "Lyonnais", 
+  "Malaysian", "Meatballs", "Mediterranean",  "Mexican",
+  "Middle Eastern", "Milk Bars", "Modern Australian", "Modern European", 
+  "Mongolian", "Moroccan", "New Mexican Cuisine", "New Zealand", "Nicaraguan", "Night Food", 
+  "Nikkei", "Noodles", "Norcinerie", "Open Sandwiches", "Oriental", "Pakistani", "Pan Asian", 
+  "Parent Cafes", "Parma", "Persian/Iranian", "Peruvian", "PF/Comercial", "Pita", "Pizza", 
+  "Polish", "Polynesian", "Pop-Up Restaurants", "Portuguese", "Potatoes", 
+  "Poutineries", "Pub Food", "Rice", "Romanian", "Rotisserie Chicken", "Russian", "Salad", 
+  "Sandwiches", "Scandinavian", "Schnitzel", "Scottish", "Seafood", "Serbo Croatian", 
+  "Signature Cuisine", "Singaporean", "Slovakian", "Somali", "Soul Food", "Soup", "Southern", 
+  "Spanish", "Sri Lankan", "Steakhouses", "Supper Clubs", "Sushi Bars", 
+  "Swabian", "Swedish", "Swiss Food", "Syrian", "Tabernas", "Taiwanese", "Tapas Bars", 
+  "Tapas/Small Plates", "Tavola Calda", "Tex-Mex", "Thai", "Traditional Norwegian", 
+  "Traditional Swedish", "Trattorie", "Turkish", "Ukrainian", "Uzbek", "Vegan", "Vegetarian", 
+  "Venison", "Vietnamese", "Waffles", "Wok", "Wraps", "Yugoslav"
+)
+category_summary<-
+  PA |>
+  separate_rows(categories, sep = ",\\s*")|>
+  group_by(categories) |>
+  summarize(count = n()) |>
+  arrange(desc(count))
+
+print(category_summary)
+
+filterPA<-
+  PA|>
+  filter(is_open == 1)|>
+  separate_rows(categories, sep = ",\\s*")|>
+  filter(categories!="Food" & categories!="Restaurants")|>
+  filter(categories %in% categories_to_keep) |>
+  group_by(name, address, city, postal_code, latitude, longitude, stars, review_count, attributes, hours) |>  
+  summarize(categories = paste(unique(categories), collapse = ", ")) |> 
+  ungroup()
+
+filterPA$city <- tolower(filterPA$city)
+
+filterPA <- filterPA |>
+  mutate(
+    postal_code = ifelse(postal_code == 10426, 19426, postal_code),
+    city = case_when(
+      city == "bensalem. pa" ~ "bensalem",
+      city == "bensalem township" ~ "bensalem",
+      city == "glenoldan" ~ "glenolden",
+      city == "feasterville-trevose" ~ "feasterville trevose",
+      city == "feasterville" ~ "feasterville trevose",
+      city == "bristol twp" ~ "bristol",
+      city == "bethel township" ~ "bethel",
+      city == "phila" ~ "philadelphia",
+      city == "philadelphia" ~ "philadelphia",
+      city == "philly" ~ "philadelphia",
+      city == "fox street" ~ "philadelphia",
+      city == "west chester pa" ~ "west chester",
+      city == "w.chester" ~ "west chester",
+      city == "gwynedd valley" ~ "gwynedd",
+      city == "skippack village" ~ "skippack",
+      city == "abington township" ~ "abington",
+      city == "cheltenham township" ~ "cheltenham",
+      city == "concordville" ~ "concord township",
+      city == "ridley park" ~ "ridley",
+      city == "warrington township" ~ "warrington",
+      city == "pennsylvania" ~ "philadelphia",
+      TRUE ~ city  
+    )
+  )
+
+save(filterPA, file = "data/filterPA.RData")
+```
+```{r merge data}
+PACounty <- read_csv("data/PA-city-county.csv")
+mergedPA <- filterPA |>
+  left_join(PACounty, by = "city")
+mergedPA <- mergedPA %>%
+  mutate(
+    county = case_when(
+      postal_code == 18969 ~ "Montgomery",
+      postal_code == 19123 ~ "Philadelphia",
+      postal_code == 19446 ~ "Montgomery",
+      postal_code == 19473 ~ "Montgomery",
+      TRUE ~ county 
+    )
+  )
+
+save(mergedPA, file = "data/mergedPA.RData")
+ 
+
+calculate_daily_hours <- function(time_str) {
+  if (is.na(time_str) || time_str == "0:0-0:0" || time_str == "") {
+    return(0) 
+  }
+  times <- str_split(time_str, "-")[[1]]
+  start_time <- as.numeric(str_split(times[1], ":")[[1]][1])
+  end_time <- as.numeric(str_split(times[2], ":")[[1]][1])
+  if (end_time < start_time) {
+    end_time <- end_time + 24
+  }
+  return(end_time - start_time)
+}
+
+mergedPA <- mergedPA |>
+  mutate(
+    Monday_hours = sapply(hours$Monday, calculate_daily_hours),
+    Tuesday_hours = sapply(hours$Tuesday, calculate_daily_hours),
+    Wednesday_hours = sapply(hours$Wednesday, calculate_daily_hours),
+    Thursday_hours = sapply(hours$Thursday, calculate_daily_hours),
+    Friday_hours = sapply(hours$Friday, calculate_daily_hours),
+    Saturday_hours = sapply(hours$Saturday, calculate_daily_hours),
+    Sunday_hours = sapply(hours$Sunday, calculate_daily_hours),
+    Total_hours = Monday_hours + Tuesday_hours + Wednesday_hours + Thursday_hours +
+                  Friday_hours + Saturday_hours + Sunday_hours,
+    Weekday_hours = Monday_hours + Tuesday_hours + Wednesday_hours +
+                    Thursday_hours + Friday_hours,
+    Weekend_hours = Saturday_hours + Sunday_hours
+  )
+
+
+print(mergedPA)
+save(mergedPA, file = "data/mergedPA.RData")
+```
