@@ -179,13 +179,6 @@ ggplot() +
   )
 ```
 
-
-### Looking for some fantastic food?
-### Looking for fancy places to eat for date?
-
-
-![](picture/looking.png)
-
 ---
 
 
