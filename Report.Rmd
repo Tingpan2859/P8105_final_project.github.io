@@ -6,6 +6,36 @@ output:
     toc: true
     toc_float: true
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,    
+  warning = FALSE,
+  message = FALSE   
+)
+
+```
+
+```{r load-packages, message=FALSE, warning=FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(tigris)
+library(tidyr)
+library(janitor)
+library(plotly)
+library(sf)
+library(broom)
+load("data/PAhour.rdata")
+load("data/mergedPA.RData")
+```
+
+Group members:  
+  - Yutong Chen (yc4617)   
+  - Tingcheng Pan (tp2859)    
+  - Shiying Wu (sw3455)   
+  - Yifan Xu (yx2857)  
+
 ## **Motivation**
 The aim of our project is to explore the relationship between restaurant pricing and customer ratings, and its reflection on the food culture and economic diversity of the city. Understanding the correlation between restaurant pricing and customer ratings has become critical as consumers demand more in terms of dietary choices and quality of life. We plan to analyze regional restaurant data to reveal potential patterns between price ranges and customer ratings, thereby providing the restaurant industry with a reference point for optimizing pricing and service enhancement.
 
@@ -55,11 +85,151 @@ The final dataset contains 7,801 observations and includes key variables such as
 ## **Exploratory analysis**
 
 ### **Regional analysis**
-The distribution of restaurants across counties reveals notable disparities. Philadelphia, with 3,426 observations, significantly surpasses all other counties, while Berks, with just 22 restaurants, has the fewest. This stark contrast underscores differences in population density, urbanization, and possibly Yelp's data coverage. These disparities may highlight underserved areas or variations in restaurant accessibility and quality between urban and rural settings.
+The distribution of restaurants across counties reveals notable disparities. Philadelphia, with 3,426 observations, significantly surpasses all other counties, while Berks, with just 22 restaurants, has the fewest. This stark contrast underscores differences in population density, urbanization, and possibly Yelp's data coverage. These disparities may highlight underserved areas or variations in restaurant accessibility and quality between urban and rural settings.  
+  
+We firstly did a basic analysis of the average rating and price range of restaurants in each county in PA. We found the counties only took a small part in the southeast of PA, and the distribution of restaurant was quite different in each county, so we plotted them in a map to display in a more straight forward way.  
+  
+```{r, include=FALSE}
+##generate a map of PA with number of restaurants as the fill color of each county
+county_restaurant_counts <- mergedPA %>%
+  group_by(county) %>%
+  summarize(restaurant_count = n()) %>%
+  ungroup()
+
+pa_counties <- counties(state = "PA", class = "sf")  
+
+county_restaurant_counts <- county_restaurant_counts %>%
+  mutate(county = tolower(county))
+
+pa_counties <- pa_counties %>%
+  mutate(NAME = tolower(NAME))
+
+pa_counties_restaurants <- pa_counties %>%
+  left_join(county_restaurant_counts, by = c("NAME" = "county"))
+
+
+```
+
+```{r}
+ggplot(data = pa_counties_restaurants) +
+  geom_sf(aes(fill = restaurant_count)) +
+  scale_fill_viridis_c(option = "plasma", na.value = "grey90") +
+  theme_minimal() +
+  labs(
+    title = "Number of Restaurants by County in Pennsylvania",
+    fill = "Restaurant Count"
+  )
+
+```
+  
+
+It was quite clear that county was not a good grouping level to show the restaurant count, so we decided to use zip code as the grouping level to show the distribution of restaurant count. We found that central Philadelphia had the most restaurants, this is consistent with the popularity and the population distribution in Pennsylvania. After a few iterations, we finalized a heat map of restaurant counts by zip code in the SE PA. The map provides a clear visual representation of restaurant distribution, with Philadelphia and its surrounding areas boasting the highest concentration of dining options. This visualization can help users identify areas with more culinary offerings and guide restaurant selection based on location and availability. A plotly version was included in the website index page.   
+
+```{r, include=FALSE}
+zip_restaurant_counts <- mergedPA %>%
+  group_by(postal_code, city) %>%
+  summarize(restaurant_count = n(), .groups = "drop") %>%
+  mutate(postal_code = as.character(postal_code)) 
+
+# PA was only available in 2010 version
+pa_zipcodes <- suppressMessages({zctas(state = "PA", class = "sf", year = 2010)}) %>%
+  mutate(ZCTA5CE10 = as.character(ZCTA5CE10))  
+
+# county boundaries
+pa_counties_6 <- counties(state = "PA", class = "sf") %>%
+  filter(NAME %in% c("Montgomery", "Delaware", "Chester", "Bucks", "Berks", "Philadelphia"))
+
+
+filtered_zipcodes <- pa_zipcodes %>%
+  semi_join(zip_restaurant_counts, by = c("ZCTA5CE10" = "postal_code"))
+
+# Join restaurant data with the filtered zip
+pa_zipcodes_restaurants <- filtered_zipcodes %>%
+  left_join(zip_restaurant_counts, by = c("ZCTA5CE10" = "postal_code"))
+
+```
+
+```{r}
+zipcode_heatmap <- ggplot(data = pa_zipcodes_restaurants) +
+  geom_sf(
+    aes(
+      fill = restaurant_count,
+      text = paste0(
+        "ZIP Code: ", ZCTA5CE10,
+        "\nCity: ", city,
+        "\nRestaurant Count: ", restaurant_count
+      )
+    ),
+    color = "grey10",  
+    , linewidth = 0.1      
+  ) +
+  geom_sf(
+    data = pa_counties_6,
+    fill = NA, 
+    color = "blue",    
+    linetype = "dashed", 
+    size = 0.8
+  ) +
+  geom_sf_text(data = pa_counties_6, aes(label = NAME), 
+               size = 4, 
+               fontface = "bold", 
+               color = "#333333") +
+  scale_fill_gradientn(
+    colors = c("#ffe2df", "#FFADAD", "#FF6F61", "#ff5252", "#a70000"), 
+    na.value = "grey90",  
+    name = "Restaurant Count"
+  ) +
+  coord_sf(
+    xlim = c(-76, -74.7),  
+    ylim = c(39.7, 40.6),  
+    expand = FALSE
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Number of Restaurants by ZIP Code in Southeastern Pennsylvania",
+    fill = "Restaurant Count"
+  )
+
+zipcode_heatmap
+```
+
+Another plot by location and ratings were then generated to investigate how the rated restaurants located.  
+```{r, fig.width = 10, fig.asp = 0.8, warning=FALSE}
+ggplot() +
+  geom_sf(data = pa_counties, color = "black", fill = "lightgrey", size = 0.8) + 
+  geom_point(
+    data = mergedPA,
+    aes(x = longitude, y = latitude, color = stars),
+    size = 0.5, alpha = 0.5
+  ) +  
+  geom_sf_text(
+    data = pa_counties,
+    aes(label = NAME),
+    size = 3, color = "black", fontface = "bold"
+  ) +  
+  coord_sf(xlim = c(-76, -74.5), ylim = c(39.7, 40.5), expand = FALSE) + 
+  theme_void(base_size = 15) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, size = 16)
+  ) +
+  guides(color = guide_colorbar(
+    title.position = "top",
+    barwidth = 15,
+    barheight = 0.5
+  )) +
+  scale_color_viridis_c(option = "D", name = "Stars") + 
+  labs(
+    title = "Restaurant Ratings in Southeastern Pennsylvania (By County)",
+    color = "Stars"
+  )
+```
 
 Interestingly, despite its small sample size, Berks County boasts the highest average restaurant rating, likely influenced by the limited data. In contrast, more populous counties, such as Philadelphia and Montgomery, exhibit stable and slightly lower average ratings. Among these, Philadelphia stands out for its consistently high scores, likely reflecting its competitive and diverse dining scene.
 
 Price range analysis further highlights regional contrasts. By calculating the range of prices for restaurants, we found that Philadelphia and Montgomery offer the widest variety of dining options. Meanwhile, Berks County exhibits a narrow price range, underscoring its limited culinary diversity.
+
+
 
 ### **Rating analysis**
 
@@ -70,27 +240,6 @@ Initially, we hypothesized a positive linear relationship between review count a
 - **Does the price range correlate with higher ratings?**
 
 By grouping restaurants into price ranges ($0–$10, $11–$30, $31–$60, $61–$200) and analyzing average star ratings, we observed a positive trend: higher price ranges generally corresponded to better ratings. However, this relationship, while evident, is not absolute. Ratings are also influenced by other factors such as cuisine type, service quality, and location, highlighting that price alone does not determine restaurant quality. For instance, average stars ranged from 3.36 for the lowest price range to 3.78 for the highest.
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  echo = TRUE,    
-  warning = FALSE,
-  message = FALSE   
-)
-
-```
-
-```{r load-packages, message=FALSE, warning=FALSE}
-
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-library(janitor)
-library(plotly)
-library(sf)
-library(broom)
-load("data/PAhour.rdata")
-```
 
 ## **Statistical Model**
 ### **Basic analysis**

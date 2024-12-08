@@ -13,7 +13,7 @@
 
 <title>Report</title>
 
-<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.28/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
@@ -392,6 +392,21 @@ div.tocify {
 </div>
 
 
+<pre class="r"><code>library(dplyr)
+library(ggplot2)
+library(tigris)
+library(tidyr)
+library(janitor)
+library(plotly)
+library(sf)
+library(broom)
+load(&quot;data/PAhour.rdata&quot;)
+load(&quot;data/mergedPA.RData&quot;)</code></pre>
+<p>Group members:<br />
+- Yutong Chen (yc4617)<br />
+- Tingcheng Pan (tp2859)<br />
+- Shiying Wu (sw3455)<br />
+- Yifan Xu (yx2857)</p>
 <div id="motivation" class="section level2">
 <h2><strong>Motivation</strong></h2>
 <p>The aim of our project is to explore the relationship between
@@ -509,6 +524,100 @@ the fewest. This stark contrast underscores differences in population
 density, urbanization, and possibly Yelp’s data coverage. These
 disparities may highlight underserved areas or variations in restaurant
 accessibility and quality between urban and rural settings.</p>
+<p>We firstly did a basic analysis of the average rating and price range
+of restaurants in each county in PA. We found the counties only took a
+small part in the southeast of PA, and the distribution of restaurant
+was quite different in each county, so we plotted them in a map to
+display in a more straight forward way.</p>
+<pre class="r"><code>ggplot(data = pa_counties_restaurants) +
+  geom_sf(aes(fill = restaurant_count)) +
+  scale_fill_viridis_c(option = &quot;plasma&quot;, na.value = &quot;grey90&quot;) +
+  theme_minimal() +
+  labs(
+    title = &quot;Number of Restaurants by County in Pennsylvania&quot;,
+    fill = &quot;Restaurant Count&quot;
+  )</code></pre>
+<p><img src="Report_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>It was quite clear that county was not a good grouping level to show
+the restaurant count, so we decided to use zip code as the grouping
+level to show the distribution of restaurant count. We found that
+central Philadelphia had the most restaurants, this is consistent with
+the popularity and the population distribution in Pennsylvania. After a
+few iterations, we finalized a heat map of restaurant counts by zip code
+in the SE PA.</p>
+<pre class="r"><code>zipcode_heatmap &lt;- ggplot(data = pa_zipcodes_restaurants) +
+  geom_sf(
+    aes(
+      fill = restaurant_count,
+      text = paste0(
+        &quot;ZIP Code: &quot;, ZCTA5CE10,
+        &quot;\nCity: &quot;, city,
+        &quot;\nRestaurant Count: &quot;, restaurant_count
+      )
+    ),
+    color = &quot;grey10&quot;,  
+    , linewidth = 0.1      
+  ) +
+  geom_sf(
+    data = pa_counties_6,
+    fill = NA, 
+    color = &quot;blue&quot;,    
+    linetype = &quot;dashed&quot;, 
+    size = 0.8
+  ) +
+  geom_sf_text(data = pa_counties_6, aes(label = NAME), 
+               size = 4, 
+               fontface = &quot;bold&quot;, 
+               color = &quot;#333333&quot;) +
+  scale_fill_gradientn(
+    colors = c(&quot;#ffe2df&quot;, &quot;#FFADAD&quot;, &quot;#FF6F61&quot;, &quot;#ff5252&quot;, &quot;#a70000&quot;), 
+    na.value = &quot;grey90&quot;,  
+    name = &quot;Restaurant Count&quot;
+  ) +
+  coord_sf(
+    xlim = c(-76, -74.7),  
+    ylim = c(39.7, 40.6),  
+    expand = FALSE
+  ) +
+  theme_minimal() +
+  labs(
+    title = &quot;Number of Restaurants by ZIP Code in Southeastern Pennsylvania&quot;,
+    fill = &quot;Restaurant Count&quot;
+  )
+
+zipcode_heatmap</code></pre>
+<p><img src="Report_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>Another plot by location and ratings were then generated to
+investigate how the rated restaurants located.</p>
+<pre class="r"><code>ggplot() +
+  geom_sf(data = pa_counties, color = &quot;black&quot;, fill = &quot;lightgrey&quot;, size = 0.8) + 
+  geom_point(
+    data = mergedPA,
+    aes(x = longitude, y = latitude, color = stars),
+    size = 0.5, alpha = 0.5
+  ) +  
+  geom_sf_text(
+    data = pa_counties,
+    aes(label = NAME),
+    size = 3, color = &quot;black&quot;, fontface = &quot;bold&quot;
+  ) +  
+  coord_sf(xlim = c(-76, -74.5), ylim = c(39.7, 40.5), expand = FALSE) + 
+  theme_void(base_size = 15) +
+  theme(
+    legend.position = &quot;bottom&quot;,
+    plot.title = element_text(hjust = 0.5, size = 16)
+  ) +
+  guides(color = guide_colorbar(
+    title.position = &quot;top&quot;,
+    barwidth = 15,
+    barheight = 0.5
+  )) +
+  scale_color_viridis_c(option = &quot;D&quot;, name = &quot;Stars&quot;) + 
+  labs(
+    title = &quot;Restaurant Ratings in Southeastern Pennsylvania (By County)&quot;,
+    color = &quot;Stars&quot;
+  )</code></pre>
+<p><img src="Report_files/figure-html/unnamed-chunk-5-1.png" width="960" /></p>
 <p>Interestingly, despite its small sample size, Berks County boasts the
 highest average restaurant rating, likely influenced by the limited
 data. In contrast, more populous counties, such as Philadelphia and
@@ -547,14 +656,6 @@ also influenced by other factors such as cuisine type, service quality,
 and location, highlighting that price alone does not determine
 restaurant quality. For instance, average stars ranged from 3.36 for the
 lowest price range to 3.78 for the highest.</p>
-<pre class="r"><code>library(dplyr)
-library(ggplot2)
-library(tidyr)
-library(janitor)
-library(plotly)
-library(sf)
-library(broom)
-load(&quot;data/PAhour.rdata&quot;)</code></pre>
 </div>
 </div>
 <div id="statistical-model" class="section level2">
@@ -624,7 +725,7 @@ credit_card_popularity_model|&gt;
 </table>
 <pre class="r"><code>qqnorm(residuals(credit_card_popularity_model), main = &quot;QQ Plot: Credit Card Popularity Model&quot;)
 qqline(residuals(credit_card_popularity_model), col = &quot;red&quot;)</code></pre>
-<p><img src="Report_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p><img src="Report_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
 </div>
 <div id="reflection-and-improvement" class="section level3">
 <h3><strong>Reflection and improvement</strong></h3>
@@ -648,7 +749,7 @@ hours_popularity_model &lt;- lm(log(popularity_score+1) ~ weekday_hours + weeken
 
 qqnorm(residuals(hours_popularity_model), main = &quot;QQ Plot: Hours Popularity Model&quot;)
 qqline(residuals(hours_popularity_model), col = &quot;red&quot;)</code></pre>
-<p><img src="Report_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p><img src="Report_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
 <pre class="r"><code>hours_popularity_model|&gt;
   tidy() %&gt;%
   knitr::kable(digits = 3)</code></pre>
@@ -793,9 +894,9 @@ multiple_model &lt;- lm(
 <p>We can see from the qq plot that the model fit is not bad.</p>
 <pre class="r"><code>qqnorm(residuals(multiple_model), main = &quot;QQ Plot of Residuals&quot;)
 qqline(residuals(multiple_model), col = &quot;red&quot;)</code></pre>
-<p><img src="Report_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p><img src="Report_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
 <pre class="r"><code>plot(multiple_model, which = 1, main = &quot;Residuals vs Fitted&quot;)</code></pre>
-<p><img src="Report_files/figure-html/unnamed-chunk-6-2.png" width="672" /></p>
+<p><img src="Report_files/figure-html/unnamed-chunk-11-2.png" width="672" /></p>
 </div>
 </div>
 <div id="r-shiny-app-to-choose-the-most-compatible-restaurant"
