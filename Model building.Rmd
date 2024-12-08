@@ -12,7 +12,6 @@ knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE   
 )
-
 ```
 
 ```{r load-packages, message=FALSE, warning=FALSE}

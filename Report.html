@@ -343,7 +343,7 @@ div.tocify {
   <a href="https://yt4617.shinyapps.io/shiny_dashboard_template/">Get your customized restaurant</a>
 </li>
 <li>
-  <a href="https://github.com/ShiyingWu-Angel/P8105_final_Project">
+  <a href="https://github.com/Tingpan2859/P8105_final_Project">
     <span class="fa fa-github fa-lg"></span>
      
   </a>
@@ -544,7 +544,12 @@ level to show the distribution of restaurant count. We found that
 central Philadelphia had the most restaurants, this is consistent with
 the popularity and the population distribution in Pennsylvania. After a
 few iterations, we finalized a heat map of restaurant counts by zip code
-in the SE PA.</p>
+in the SE PA. The map provides a clear visual representation of
+restaurant distribution, with Philadelphia and its surrounding areas
+boasting the highest concentration of dining options. This visualization
+can help users identify areas with more culinary offerings and guide
+restaurant selection based on location and availability. A plotly
+version was included in the website index page.</p>
 <pre class="r"><code>zipcode_heatmap &lt;- ggplot(data = pa_zipcodes_restaurants) +
   geom_sf(
     aes(
